@@ -46,10 +46,10 @@ func main() {
 	log.Info("starting up")
 
 	// start the tracer with zero or more options
-	tracer.Start(tracer.WithServiceName("test-go"))
+	tracer.Start()
 	defer tracer.Stop()
 
-	mux := httptrace.NewServeMux() // init the http tracer
+	mux := httptrace.NewServeMux(httptrace.WithServiceName("test-go")) // init the http tracer
 	mux.HandleFunc("/ping", sayPong)
 	mux.HandleFunc("/", sayHello) // use the tracer to handle the urls
 
