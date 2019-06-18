@@ -1,33 +1,36 @@
 package main
 
 import (
+	"log"
 	"net/http"
+	"strings"
 
-	"github.com/gin-gonic/gin"
-	gintrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"
+	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
-var db = make(map[string]string)
+func sayHello(w http.ResponseWriter, r *http.Request) {
+	message := r.URL.Path
+	message = strings.TrimPrefix(message, "/")
+	message = "Hello " + message
+	w.Write([]byte(message))
+}
 
-func setupRouter() *gin.Engine {
-	// Disable Console Color
-	// gin.DisableConsoleColor()
-	r := gin.Default()
-	r.Use(gintrace.Middleware("test-go"))
-
-	// Ping endpoint
-	r.GET("/ping", func(c *gin.Context) {
-		c.String(http.StatusOK, "pong")
-	})
-
-	r.GET("/", func(c *gin.Context) {
-		c.String(http.StatusOK, "Hello World!")
-	})
-	return r
+func sayPong(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("pong"))
 }
 
 func main() {
-	r := setupRouter()
-	// Listen and Server in 0.0.0.0:8080
-	r.Run(":8080")
+	// start the tracer with zero or more options
+	tracer.Start(tracer.WithServiceName("test-go"))
+	defer tracer.Stop()
+
+	mux := httptrace.NewServeMux() // init the http tracer
+	mux.HandleFunc("/ping", sayPong)
+	mux.HandleFunc("/", sayHello) // use the tracer to handle the urls
+
+	err := http.ListenAndServe(":8080", mux) // set listen port
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }
