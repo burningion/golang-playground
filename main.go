@@ -16,8 +16,13 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 	spanID := span.Context().SpanID()
 
 	message := r.URL.Path
+
+	// set a tag for the current path
+	span.SetTag("url.path", message)
+
 	message = strings.TrimPrefix(message, "/")
 
+	// log with matching trace ID
 	log.WithFields(log.Fields{
 		"dd.trace_id": traceID,
 		"dd.span_id":  spanID,
@@ -49,7 +54,7 @@ func main() {
 	tracer.Start()
 	defer tracer.Stop()
 
-	mux := httptrace.NewServeMux(httptrace.WithServiceName("test-go")) // init the http tracer
+	mux := httptrace.NewServeMux(httptrace.WithServiceName("test-go"), httptrace.WithAnalytics(true)) // init the http tracer
 	mux.HandleFunc("/ping", sayPong)
 	mux.HandleFunc("/", sayHello) // use the tracer to handle the urls
 
