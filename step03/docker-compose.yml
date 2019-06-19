@@ -18,7 +18,7 @@ services:
     labels:
       com.datadoghq.ad.logs: '[{"source": "datadog-agent", "service": "agent"}]'
   frontend:
-    build: .
+    build: ./frontend
     environment:
       - DD_AGENT_HOST=agent
       - DD_TRACE_AGENT_PORT=8126
@@ -28,3 +28,15 @@ services:
       - agent
     labels:
       com.datadoghq.ad.logs: '[{"source": "go", "service": "frontend-go-service"}]'
+  super-service:
+    build: ./super-service
+    environment:
+      - DD_AGENT_HOST=agent
+      - DD_TRACE_AGENT_PORT=8126
+    ports:
+      - "8080:8080"
+    depends_on:
+      - agent
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "go", "service": "frontend-go-service"}]'
+  

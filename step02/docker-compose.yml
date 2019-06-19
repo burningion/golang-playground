@@ -22,7 +22,6 @@ services:
     environment:
       - DD_AGENT_HOST=agent
       - DD_TRACE_AGENT_PORT=8126
-      - GIN_MODE=release
     ports:
       - "8080:8080"
     depends_on:
