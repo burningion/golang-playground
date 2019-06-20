@@ -61,6 +61,7 @@ func superSizeMe(span tracer.Span, l *log.Entry, w http.ResponseWriter, r *http.
 	}
 	l.Info(m.Content)
 
+	m.Content = strings.ToUpper(m.Content)
 	json.NewEncoder(w).Encode(m)
 }
 
@@ -76,7 +77,7 @@ func main() {
 	mux.HandleFunc("/super", withSpanAndLogger(superSizeMe))
 	mux.HandleFunc("/", withSpanAndLogger(sayHello)) // use the tracer to handle the urls
 
-	err := http.ListenAndServe(":8080", mux) // set listen port
+	err := http.ListenAndServe(":8081", mux) // set listen port
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}

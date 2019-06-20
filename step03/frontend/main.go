@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -12,6 +14,9 @@ import (
 
 // Define a type for a handler that provides tracing parameters as well
 type tracedHandler func(tracer.Span, *log.Entry, http.ResponseWriter, *http.Request)
+type Message struct {
+	Content string `json:"content"`
+}
 
 // Write a wrapper function that does the magic preparation before calling the traced handler.
 // This returns a function that is suitable for passing to mux.HandleFunc
@@ -28,7 +33,7 @@ func withSpanAndLogger(t tracedHandler) func(http.ResponseWriter, *http.Request)
 	}
 }
 
-func sayHello(span tracer.Span, l *log.Entry, w http.ResponseWriter, r *http.Request) {
+func sayHelloSuper(span tracer.Span, l *log.Entry, w http.ResponseWriter, r *http.Request) {
 	message := r.URL.Path
 
 	// set a tag for the current path
@@ -41,7 +46,21 @@ func sayHello(span tracer.Span, l *log.Entry, w http.ResponseWriter, r *http.Req
 		"message": message,
 	}).Info("root url called with " + message)
 
-	message = "Hello " + message
+	js := Message{Content: message}
+	jsonValue, _ := json.Marshal(js)
+
+	resp, _ := http.Post("http://super-service:8081/super", "application/json", bytes.NewBuffer(jsonValue))
+
+	defer resp.Body.Close()
+
+	rjs := Message{}
+	err := json.NewDecoder(resp.Body).Decode(&rjs)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	message = "Hello " + rjs.Content
 
 	w.Write([]byte(message))
 }
@@ -62,7 +81,7 @@ func main() {
 
 	mux := httptrace.NewServeMux(httptrace.WithServiceName("test-go"), httptrace.WithAnalytics(true)) // init the http tracer
 	mux.HandleFunc("/ping", withSpanAndLogger(sayPong))
-	mux.HandleFunc("/", withSpanAndLogger(sayHello)) // use the tracer to handle the urls
+	mux.HandleFunc("/", withSpanAndLogger(sayHelloSuper)) // use the tracer to handle the urls
 
 	err := http.ListenAndServe(":8080", mux) // set listen port
 	if err != nil {
